@@ -134,14 +134,6 @@ def generate_key():
                 return p*q
 
 
-def encryption():
-    pass
-
-
-
-
-
-
 
 
 #use crt to find the modular exponentiation
@@ -185,13 +177,72 @@ def encrption(message, totient, encryp):
 
 
         #rsa encrption  Med = Med = m mod n, n is the totient
-        encp_val = pow(bv.int_val(), e, totient)
+        encp_val = pow(bv.int_val(), e, int(totient))
         bv_e = BitVector(intVal=encp_val, size=256)
 
         #write the bitvector to the file
         file_out.write(bv_e.get_hex_string_from_bitvector())
 
     file_out.close()
+
+
+def break_rsa(enc1, enc2, enc3, n_file, craked):
+    e1 = open(enc1, "r")
+    e2 = open(enc2, "r")
+    e3 = open(enc3, "r")
+
+    file_out = open("craked", "wb")
+
+    file_bv1 = BitVector(hexstring=e1.read())
+    file_bv2 = BitVector(hexstring=e2.read())
+    file_bv3 = BitVector(hexstring=e3.read())
+    files = [file_bv1, file_bv2, file_bv3]
+    n_f = open(n_file,"r")
+    n = n_f.readlines()
+
+    #pg 98
+    #Since n1, n2, and n3 are pairwise co-prime, CRT allows us to reconstruct M3 modulo N = n1 × n2 × n3
+    N = int(n[0].strip()) *  int(n[1].strip()) *int(n[2].strip())
+
+
+    C_list = [None, None, None]
+
+
+    for i in range(0, len(file_bv1), 256):
+        index = 0
+        #iterate through 3 files and then generate M session one by one
+        for file_bv in files:
+            block = file_bv[i:i + 256]
+            block_val = block.int_val()
+            C_list[index] = block_val
+            index += 1
+
+        index2 = 0
+        M = 0
+        # then i have to find the Ni value, where Ni = N / ni
+        for Ci in C_list:
+            #get the ni first
+            ni = int(n[index2].strip())
+            ni_bv = BitVector(intVal=ni)
+            #generate Ni
+            Ni = N // ni
+
+            #calculate the inverse of Ni
+            Ni_bv = BitVector(intVal=Ni)
+            Ni_inv = Ni_bv.multiplicative_inverse(ni_bv).int_val()
+
+            #Ninv_list.append(Ni_inv)
+            index2 += 1
+
+            # Then calculate M based on M3by (C1 × N1 × Ninv1 + C2 × N2 × Ninv2 + C3 × N3 × Ninv3 ) mod N
+            M += Ci * Ni * Ni_inv
+
+        M = M % N
+        M_root = solve_pRoot(3,M)
+        M_bv = BitVector(intVal=M_root, size=128)
+
+        M_bv.write_to_file(file_out)
+
 
 
 
@@ -208,18 +259,32 @@ def main():
         d = e_bv.multiplicative_inverse(n_bv)
         d = d.int_val()
         d_list.append(d)
-
     if pattern == "-e":
         message = sys.argv[2]
         enc1 = sys.argv[3]
         enc2 = sys.argv[4]
         enc3 = sys.argv[5]
         n_file = sys.argv[6]
+        files = [enc1, enc2, enc3]
+        for i in range(1,4):
+            encrption(message, n_list[i - 1], files[i - 1])
+
+        with open(n_file, "w") as f:
+            for n in n_list:
+                f.write(str(n))
+                f.write("\n")
+
+        f.close()
     elif pattern == "-c":
         enc1 = sys.argv[2]
         enc2 = sys.argv[3]
         enc3 = sys.argv[4]
         n_file = sys.argv[5]
         craked = sys.argv[6]
+
+        break_rsa(enc1, enc2, enc3, n_file, craked)
     else:
         raise ValueError("The input from the system is wrong")
+
+if __name__ == '__main__':
+    main()
