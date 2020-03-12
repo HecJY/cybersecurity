@@ -93,7 +93,7 @@ class SHA(object):
         #  The 8 32-words used for initializing the 512-bit hash buffer before we start scanning the
         #  input message block for its hashing. See page 13 (page 17 of the PDF) of the NIST standard.
         #  Note that the hash buffer consists of 8 32-bit words named h0, h1, h2, h3, h4, h5, h6, and h7.
-        # THE VALUES CAN BE FOUND
+        # THE VALUES CAN BE FOUND page 43
 
         h0 = BitVector(hexstring='6a09e667f3bcc908')
         h1 = BitVector(hexstring='bb67ae8584caa73b')
