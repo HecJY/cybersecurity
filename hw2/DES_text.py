@@ -66,10 +66,9 @@ pbox_permutation = [15,6,19,20,28,11,27,16,0,14,22,25,4,17,30,9,
 1,7,23,13,31,26,2,8,18,12,29,5,21,10,3,24]
 
 
-def get_encryption_key():
-    key = ""
+def get_encryption_key(filename):
 
-    file = open("key.txt")
+    file = open(filename)
     key = file.read()
     key = BitVector(textstring = key)
     key = key.permute(key_permutation_1)
@@ -89,16 +88,20 @@ def extract_round_key(encryption_key):
     return round_keys
 
 
-def encrypt(filename, round_key):
+def encrypt(filename, round_key, file3):
     bv = BitVector( filename = filename )
-    file = open("encrypted.txt", "w")
+    file = open(file3, "a")
     #init a
     encrypted_text =BitVector(size = 0)
     while (bv.more_to_read):
         bitvec = bv.read_bits_from_file( 64 )
         if bitvec.size > 0:
+            if len(bitvec) != 64:
+                # fiil the array when the bit count is not 64
+                bitvec.pad_from_right(64 - len(bitvec))
+            #divide the left and right bit first, then put in the boxes
+            [LE, RE] = bitvec.divide_into_two()
             for i in range(0, len(round_key)):
-                [LE, RE] = bitvec.divide_into_two()
                 newRE = RE.permute( expansion_permutation )
                 out_xor = newRE^(round_key[i])
 
@@ -108,13 +111,16 @@ def encrypt(filename, round_key):
                 #permutation with the expansion box
                 permute_RE = sub.permute(pbox_permutation)
 
-                #now switch the right and left side, update the left side
-                LE = RE
-                RE = permute_RE ^ LE
-            encrypted_text += LE + RE
 
-    outputhex = encrypted_text.get_hex_string_from_bitvector()
-    file.write(outputhex)
+                #now switch the right and left side, update the left side
+                RE_new = permute_RE ^ LE
+                LE = RE
+                RE = RE_new
+            encrypted_text = LE + RE
+            outputhex = encrypted_text.get_hex_string_from_bitvector()
+            file.write(outputhex)
+
+
     file.close()
 
 def substitute( expanded_half_block ):
@@ -130,49 +136,106 @@ def substitute( expanded_half_block ):
         output[sindex*4:sindex*4+4] = BitVector(intVal = s_boxes[sindex][row][column], size = 4)
     return output
 
-def decrypt(filename, round_key):
-    #FILEIN = open(filename)
-    #bv = BitVector(hexstring=FILEIN.read())  # (K)
+def decrypt(filename, round_key, file3):
+    FILEIN = open(filename)
+    bv = BitVector(hexstring=FILEIN.read())  # (K)
+    FILEOUT = open(file3, 'ab')  # (d)
 
-    plain_text = BitVector(size=0)
-
-    bv = BitVector(filename = filename)
-    while (bv.more_to_read):
-        bitvec = bv.read_bits_from_file( 64 )
+    #bv = BitVector(filename = filename)
+    #file = FILEIN.read()
+    length = bv.length()
+    for i in range(0, length - 64, 64):
+        bitvec = bv[i:i + 64]
         if bitvec.size > 0:
-            #starting from the last count block
-            for i in range(len(round_key) - 1, -1, -1):
-                [LD, RD] = bitvec.divide_into_two()
-
-                RD = RD.permute(expansion_permutation)
-                newRD = RD.permute(expansion_permutation)
-                out_xor = newRD ^ (round_key[i])
+            if len(bitvec) != 64:
+                # fiil the array when the bit count is not 64
+                bitvec.pad_from_right(64 - len(bitvec))
+            [LE, RE] = bitvec.divide_into_two()
+            for i in range(0, len(round_key)):
+                newRE = RE.permute(expansion_permutation)
+                out_xor = newRE ^ (round_key[i])
 
                 # substition with the s-box
                 sub = substitute(out_xor)
 
                 # permutation with the expansion box
-                permute_RD = sub.permute(pbox_permutation)
+                permute_RE = sub.permute(pbox_permutation)
 
                 # now switch the right and left side, update the left side
-                LD = RD
-                RD = permute_RD ^ LD
-            plain_text += LD + RD
+                RE_new = permute_RE ^ LE
+                LE = RE
+                RE = RE_new
 
-    outputtext = plain_text.get_text_from_bitvector()
-
-    FILEOUT = open("decrypted.txt", 'w', "utf-8")  # (d)
-    FILEOUT.write(outputtext)  # (e)
+            plain_text = RE + LE
+            plain_text.write_to_file(FILEOUT)
     FILEOUT.close()
 
 
 
 
 def main():
-    key = get_encryption_key()
+    type = ""
+    if(len(sys.argv) == 5):
+        type = sys.argv[1]
+        file1 = sys.argv[2]
+        key_file = sys.argv[3]
+        file3 = sys.argv[4]
+    else:
+        file1 = sys.argv[1]
+        key_file = sys.argv[2]
+        file3 = sys.argv[3]
+
+    key = get_encryption_key(key_file)
+
+    #key = get_encryption_key("key.txt")
     round_key = extract_round_key(key)
-    encrypt("message.txt",round_key)
-    decrypt("encrypted.txt", round_key)
+
+    if type == "-e":
+        encrypt(file1, round_key, file3)
+    elif type == "-d":
+        round_key = round_key[::-1]
+        decrypt(file1, round_key, file3)
+    else:
+        image_encyption(file1, round_key, file3)
+
+
+def image_encyption(image, round_key, output_f):
+    file = open(image, "rb")
+    file_out = open(output_f, "wb")
+
+    image_info = file.readlines()
+    file_out.writelines(image_info[0:3])
+
+    file_out.close()
+
+    image_bv = BitVector(filename = image)
+    image_bv.read_bits_from_file(len(image_info[0:3])*8)
+
+    while (image_bv.more_to_read):
+        bitvec = image_bv.read_bits_from_file(64)
+        if bitvec.size > 0:
+            if len(bitvec) != 64:
+                # fiil the array when the bit count is not 64
+                bitvec.pad_from_right(64 - len(bitvec))
+            # divide the left and right bit first, then put in the boxes
+            [LE, RE] = bitvec.divide_into_two()
+            for i in range(0, len(round_key)):
+                newRE = RE.permute(expansion_permutation)
+                out_xor = newRE ^ (round_key[i])
+
+                # substition with the s-box
+                sub = substitute(out_xor)
+
+                # permutation with the expansion box
+                permute_RE = sub.permute(pbox_permutation)
+
+                # now switch the right and left side, update the left side
+                RE_new = permute_RE ^ LE
+                LE = RE
+                RE = RE_new
+            encrypted_text = LE + RE
+            with open(output_f, "ab") as file_out:
+                encrypted_text.write_to_file(file_out)
 
 
 if __name__ == '__main__':
