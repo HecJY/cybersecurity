@@ -109,5 +109,5 @@ if __name__ == '__main__':
 
     Tcp = TcpAttack(spoofIP, targetIP)
     Tcp.scanTarget(0, 255)
-    if(Tcp.attackTarget(22, 5)):
+    if(Tcp.attackTarget(22, 10)):
         print('port was open to attack')
