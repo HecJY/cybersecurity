@@ -26,14 +26,17 @@ echo block the following ip addresses $block_ip_1 $block_ip_2
 
 # Block your computer from being pinged by all other hosts (Hint: ping uses ICMP Echo requests).
 iptables -A INPUT -p icmp --icmp-type echo-request -j DROP
+echo block from pinged
 
 # pg 54
 # Set up port-forwarding from an unused port of your choice to port 22 on your computer. Test if you can SSH into your machine using both ports (Hint: You need to enable connections on the unused port as well).
 iptables -t nat -A PREROUTING -p tcp -d $local_ip -dport 80 -j DNAT --to-destination $local_ip:22
+echo set port 22
 
 # Allow for SSH access (port 22) to your machine from only the engineering.purdue.edu domain.
 iptables -A INPUT -p tcp -s 128.46.0.0 --dport 22 -j ACCEPT
 iptables -A INPUT -p tcp -s 0.0.0.0/0 --dport 22 -j DROP
+
 
 # Assuming you are running an HTTPD server on your machine that can make available your entire home directory to the outside world, write a rule that allows only a single IP address in the internet to access your machine for the HTTP service.
 iptables -A INPUT -p tcp -s 111.111.111.111 --dport 111 -j ACCEPT
