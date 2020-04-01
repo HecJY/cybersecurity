@@ -1,9 +1,9 @@
 #!/bin/sh
 
 #set the macros
-block_ip_1=""
-block_ip_2=""
-local_ip=$(hostname -I)
+block_ip_1="121.121.121.121"
+block_ip_2="101.101.101.101"
+local_ip=$(hostname -I | sed 's/ //g')
 
 
 #
@@ -29,7 +29,7 @@ iptables -A INPUT -p icmp --icmp-type echo-request -j DROP
 
 # pg 54
 # Set up port-forwarding from an unused port of your choice to port 22 on your computer. Test if you can SSH into your machine using both ports (Hint: You need to enable connections on the unused port as well).
-iptables -t nat -A PREROUTING -p tcp -d 123.45.67.89 -dport 80 -j DNAT --to-destination $local_ip:22
+iptables -t nat -A PREROUTING -p tcp -d $local_ip -dport 80 -j DNAT --to-destination $local_ip:22
 
 # Allow for SSH access (port 22) to your machine from only the engineering.purdue.edu domain.
 iptables -A INPUT -p tcp -s 128.46.0.0 --dport 22 -j ACCEPT
