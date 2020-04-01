@@ -30,7 +30,7 @@ echo block from pinged
 
 # pg 54
 # Set up port-forwarding from an unused port of your choice to port 22 on your computer. Test if you can SSH into your machine using both ports (Hint: You need to enable connections on the unused port as well).
-iptables -t nat -A PREROUTING -p tcp -d $local_ip -dport 80 -j DNAT --to-destination $local_ip:22
+iptables -t nat -A PREROUTING -p tcp -d $local_ip --dport 80 -j DNAT --to-destination $local_ip:22
 echo set port 22
 
 # Allow for SSH access (port 22) to your machine from only the engineering.purdue.edu domain.
