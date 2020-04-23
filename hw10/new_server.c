@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
 
 char * clientComm(int clntSockfd,int * senderBuffSize_addr, int * optlen_addr){
 
-    //To eliminate the buffer overflow scenario, we can get rid of the which is the str
+    //To eliminate the buffer overflow scenario, we can get rid of the buffer which is the str
 
     char *recvBuff; /* recv data buffer */
     int numBytes = 0; 
@@ -123,7 +123,7 @@ char * clientComm(int clntSockfd,int * senderBuffSize_addr, int * optlen_addr){
 
     //strcpy(str, recvBuff);
 	
-    /* send data to the client */ //directly send the recv buffer to the client
+    /* send data to the client */  //directly send the recv buffer to the client
     if (send(clntSockfd, recvBuff, strlen(recvBuff), 0) == -1) {
         perror("send failed");
         close(clntSockfd);
