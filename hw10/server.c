@@ -100,9 +100,12 @@ int main(int argc, char *argv[])
 }
 
 char * clientComm(int clntSockfd,int * senderBuffSize_addr, int * optlen_addr){
+
+    //To eliminate the buffer overflow scenario, we can get rid of the which is the str
+
     char *recvBuff; /* recv data buffer */
     int numBytes = 0; 
-    char str[MAX_DATA_SIZE];
+    //char str[MAX_DATA_SIZE]; eliminate the str
     /* recv data from the client */
     getsockopt(clntSockfd, SOL_SOCKET,SO_SNDBUF, senderBuffSize_addr, optlen_addr); /* check sender buffer size */
     recvBuff = malloc((*senderBuffSize_addr) * sizeof (char));
@@ -118,10 +121,10 @@ char * clientComm(int clntSockfd,int * senderBuffSize_addr, int * optlen_addr){
         exit(1);
     }    
 
-    strcpy(str, recvBuff);
+    //strcpy(str, recvBuff);
 	
-    /* send data to the client */
-    if (send(clntSockfd, str, strlen(str), 0) == -1) {
+    /* send data to the client */ //directly send the recv buffer to the client
+    if (send(clntSockfd, recvBuff, strlen(recvBuff), 0) == -1) {
         perror("send failed");
         close(clntSockfd);
         exit(1);
